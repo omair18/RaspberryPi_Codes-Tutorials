@@ -1,0 +1,3 @@
+rm finalcode 
+gcc finalcode.c -o BOT -lwiringPi -lpthread
+sudo ./BOT

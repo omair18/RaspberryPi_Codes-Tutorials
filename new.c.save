@@ -1,0 +1,103 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <termios.h>
+#include <wiringPi.h>
+
+char getch() {
+
+	char buf = 0;
+	struct termios old = {0};
+	if(tcgetattr(0,&old) < 0)
+		perror("tcsetattr()");
+	old.c_lflag &= ~ICANON;
+	old.c_lflag &= ~ECHO;
+	old.c_cc[VMIN] = 1;
+	old.c_cc[VTIME] = 0;
+
+	if(tcsetattr(0,TCSANOW, &old) < 0)
+		perror("tcsetattr ICANON");
+
+	if(read(0,&buf, 1) < 0)
+		perror("read()");
+	old.c_lflag |= ICANON;
+	old.c_lflag |= ECHO;
+
+	if(tcsetattr(0,TCSADRAIN, &old) < 0)
+		perror("tcsetattr ~ICANON");
+
+	return (buf);
+}
+
+#define MOTOR11 0 //Motor1 terminal 1
+#define MOTOR12 1// Motor1 terminal 2
+#define MOTOR21 2 // Motor2 terminal 1
+#define MOTOR22 3 // Motor2 terminal 2
+#define DELAY 45 
+#define PWM 200
+
+int main ()
+{
+	printf("\nRUNNING CODE\n");
+	wiringPiSetup();
+	// set all pins to output mode
+	softPwmCreate(MOTOR11,0,255);
+	softPwmCreate(MOTOR12,0,255);
+	softPwmCreate(MOTOR21,0,255);
+	softPwmCreate(MOTOR22,0,255);
+
+
+
+	while(1) {
+
+		if(getch() == '\033') {
+			getch(); // ignore the next character
+			switch(getch()) {
+				case 'A':
+					printf("FORWARD\n");
+					
+					delay(DELAY);
+					//turn off both motors now, so that they work only when we hit button
+					digitalWrite(MOTOR11,LOW);
+					digitalWrite(MOTOR21,LOW);
+					break;
+				case 'B':
+					printf("BACKWARD\n");
+					digitalWrite(MOTOR12,HIGH);
+					digitalWrite(MOTOR22,HIGH);
+					digitalWrite(MOTOR11,LOW);
+					digitalWrite(MOTOR21,LOW);
+					delay(DELAY);
+					//turn off both motors, so that they work only when we hit button
+					digitalWrite(MOTOR12,LOW);
+					digitalWrite(MOTOR22,LOW);
+					break;
+				case 'C':
+					//printf("Right\n");
+					printf("RIGHT\n");
+					digitalWrite(MOTOR21,HIGH);
+					digitalWrite(MOTOR22,LOW);
+					digitalWrite(MOTOR11,LOW);
+					digitalWrite(MOTOR12,LOW);
+					delay(DELAY);
+					//turn off motor
+					digitalWrite(MOTOR21,LOW);
+					break;
+				case 'D':
+					printf("Left\n");
+					digitalWrite(MOTOR11,HIGH);
+					digitalWrite(MOTOR12,LOW);
+					digitalWrite(MOTOR21,LOW);
+					digitalWrite(MOTOR22,LOW);
+					delay(DELAY);
+					//turn off motor
+					digitalWrite(MOTOR11,LOW);
+					break;
+			}
+		}
+		else if (getch() == 'q') {
+			return 0; 
+		}
+
+	}
+}
